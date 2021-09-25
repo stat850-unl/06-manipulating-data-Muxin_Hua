@@ -1,0 +1,107 @@
+---
+title: "Annabel Lee"
+author: "Susan Vanderplas"
+date: "6/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Annabel Lee
+
+
+Read in the lines of text in "The Annabel Lee" and write code to do the following tasks:
+
+1. Create a tibble with a column that contains the lines of the poem (leave the blank lines in for now)
+2. Count the number of words in each line. Do you see any patterns?
+3. Can you use this information to create a variable with stanza numbers?
+4. Create a column with line numbers (within each stanza)
+5. Split the lines of the poem into words (you can discard punctuation). Is there any discernible pattern?
+
+```{r}
+library(tidyverse)
+
+poem_lines <- readLines("annabel_lee_poe.txt")
+
+poem <- tibble(lines = poem_lines) %>%
+  # This looks for a letter + a space (of any sort, so an end-line counts) or
+  # punctuation (last word of a line ends with e.g. a period or comma)
+  mutate(n_words = str_count(lines, "([A-z][[:space:][:punct:]])")) %>%
+  # 0-word lines mark the end of a stanza...
+  mutate(stanza = cumsum(n_words == 0) + 1) %>%
+  # Create an overall line number
+  mutate(overall_line = 1:n()) %>%
+  # Now we can get rid of lines with 0 words
+  filter(n_words > 0) %>%
+  # We can group by stanza and count the lines within each stanza
+  group_by(stanza) %>%
+  mutate(stanza_line = 1:n())
+
+# Words
+poem_words <- poem %>%
+  mutate(words = str_split(lines, "[[:space:][:punct:]]", simplify = F)) %>%
+  unnest(c(words)) %>%
+  # Require words to have some non-space character
+  filter(nchar(str_trim(words)) > 0) %>%
+  # For each line, group by line number and calculate the word number
+  group_by(overall_line) %>%
+  mutate(word_num = 1:n())
+```
+
+We can use some exploratory plots to see some of the patterns within the structure of the poem...
+
+```{r}
+ggplot(poem, aes(x = 1:nrow(poem), y = n_words)) + geom_line()
+
+ggplot(poem, aes(x = stanza_line, y = n_words, color = factor(stanza))) + geom_line()
+```
+
+Here, it looks like there is generally a pattern of long line-short-line, with the notable exception of Stanza 5. 
+
+When we explore the words, we have lots of options:
+
+```{r}
+ggplot(poem_words, aes(x = word_num, y = overall_line, 
+                       fill = str_detect(words, "sea"))) + 
+  geom_tile(color = "black") + 
+  scale_fill_manual("Word is sea", values = c("FALSE" = "white", "TRUE" = "blue")) + 
+  # Make the tiles start at the top for line 1, like we would read in a poem
+  scale_y_reverse() +
+  ggtitle("Use of the word 'sea' in Edgar Allan Poe's Annabel Lee")
+
+
+ggplot(poem_words, aes(x = word_num, y = overall_line, 
+                       fill = str_detect(words, "love.*"))) + 
+  geom_tile(color = "black") + 
+  scale_fill_manual("Word is similar to love", values = c("FALSE" = "white", "TRUE" = "red")) + 
+  # Make the tiles start at the top for line 1, like we would read in a poem
+  scale_y_reverse() +
+  ggtitle("Use of the word 'love' in Edgar Allan Poe's Annabel Lee")
+
+
+ggplot(poem_words, aes(x = word_num, y = overall_line, 
+                       fill = str_detect(words, "Annabel|Lee|maiden|her|she|darling|bride"))) + 
+  geom_tile(color = "black") + 
+  scale_fill_manual("Annabel Lee", values = c("FALSE" = "white", "TRUE" = "green4")) + 
+  # Make the tiles start at the top for line 1, like we would read in a poem
+  scale_y_reverse() +
+  ggtitle("References to Annabel Lee")
+
+
+religious_words <- c("Heaven", "seraph", "sepulchre", "angels", "demons", "soul", "tomb") %>%
+  paste(collapse = "|")
+
+ggplot(poem_words, aes(x = word_num, y = overall_line, 
+                       fill = str_detect(words, religious_words))) + 
+  geom_tile(color = "black") + 
+  scale_fill_manual("Religious words", values = c("FALSE" = "white", "TRUE" = "purple")) + 
+  # Make the tiles start at the top for line 1, like we would read in a poem
+  scale_y_reverse() +
+  ggtitle("Use of religious references in Edgar Allan Poe's Annabel Lee")
+```
+
+I've created a tile plot that shows what type of word we're looking at. In simple cases ('sea'), we can look for a single word, but in some cases (things referencing Annabel Lee) we have to look for multiple words -- so we join them together with '|', which is "or" when dealing with strings. 
+
+We could, of course, interpret each of these patterns in the poetic sense, but for now, the patterns themselves are interesting enough. 
