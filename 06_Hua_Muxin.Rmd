@@ -1,0 +1,142 @@
+---
+title: 'Homework: Manipulating Data'
+author: "Firstname Lastname"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 3)
+```
+
+
+```{r load-sas-libraries, echo = F, message = F, warning = F}
+
+library(SASmarkdown)
+sas_enginesetup(sashtml=sashtml)
+
+sasexe <- "C:/Program Files/SASHome/SASFoundation/9.4/sas.exe"
+sasopts <- "-nosplash -ls 75"
+
+# Linux options (for grading, please leave this in!)
+# sasexe <- "/usr/local/SASHome/SASFoundation/9.4/bin/sas_en"
+# sasopts <- "-ls 75"
+```
+
+## Instructions
+
+When you are finished with the assignment: 
+
+1. Save the file as 06_Lastname_Firstname.Rmd and compile it
+2. Commit the Rmd file and corresponding html file to your homework git repo
+3. Push the commit to github
+4. Locate the Rmd file on github and click on the SHA link for the file
+5. Paste the url of the resulting page into Canvas to submit your assignment.
+
+Your assignment must compile on a different computer as long as the saspath is set correctly for that machine. This means you will need to use a local file path when you read the data in via R (and SAS). 
+
+## Poetry? The `R`aven
+(In case it isn't obvious, do this part in R)
+
+We can of course read in data from any number of sources, but we can also use R to analyze poetry and written text. Poetry is particularly interesting as it typically is stored in lines and stanzas, making it an ideal structured text to read in and create variables for. In this exercise, you'll be playing around with a poem and using string functions to explore the poem. We haven't covered string functions formally yet, so this is also a chance to explore the `stringr` package on your own (we'll formally talk about strings more next week). Think of this as good practice for reading the documentation of a package and learning how to leverage that documentation to accomplish a task.
+
+> "The Raven" is a narrative poem by American writer Edgar Allan Poe. First published in January 1845, the poem is often noted for its musicality, stylized language, and supernatural atmosphere. Sitting on a bust of Pallas, the raven seems to further distress the protagonist with its constant repetition of the word "Nevermore". The poem makes use of folk, mythological, religious, and classical references. -- [Wikipedia](https://en.wikipedia.org/wiki/The_Raven)
+
+Read in the lines of text in "The Raven" and write code to do the following tasks:
+
+1. Create a tibble with a column that contains the lines of the poem (leave the blank lines in for now)
+2. Count the number of words in each line. Do you see any patterns?
+3. Can you use this information to create a variable with stanza numbers?
+4. Create a column with line numbers (within each stanza)
+5. Split the lines of the poem into words (you can discard punctuation). Is there any discernible pattern?
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(quanteda)
+library(nsyllable)
+library(ggplot2)
+
+raven <- readLines('the_raven_poe.txt')
+
+raven_tb <- tibble(lines = raven) %>%
+            mutate(n_word = str_count(lines, '[A-z][[:punct:][:space:]]')) %>%
+            mutate(stanza = cumsum(n_word == 0)+ 1) %>%
+            mutate(overall_line = 1:n()) %>%
+            filter(n_word > 0) %>%
+            group_by(stanza) %>%
+            mutate(stanza_line = 1:n())
+
+raven_wd <- raven_tb %>%
+            mutate(word = str_split(lines, '[[:space:][:punct:]]', simplify = F)) %>%
+            unnest(c(word)) %>%
+            filter(nchar(str_trim(word))>0) %>%
+            group_by(overall_line) %>%
+            mutate(n_line_word = 1:n())
+
+```
+
+If this seems difficult, I understand. I have included a short demonstration of the assignment using the Edgar Allan Poe poem "Annabel Lee" so that you can get a sense of what I'm asking for. For each task, you may find it useful to do the task manually for a few lines, then write out a specific task list that summarizes the operations you had to do to complete the task. Use this list to create your sequence of steps by translating the steps into `dplyr` verbs.
+
+If you are interested, you can use the `nsyllable` function in the R package `quanteda` to get syllable counts and continue the exploration. 
+```{r}
+raven_syllable <- raven_wd %>%
+                  mutate(n_word_syllable = nsyllable(word)) %>%
+                  group_by(stanza_line) %>%
+                  mutate(n_line_syllable = cumsum(n_word_syllable))
+```
+
+#### Plot data
+> 1. line vs number of words per line  
+> 2. line with in one stanza vs number of words per line   
+
+```{r}
+ggplot(raven_tb, aes(x = 1:nrow(raven_tb), y = n_word))+geom_line()
+ggplot(raven_tb, aes(x=stanza_line, y=n_word, color = factor(stanza))) + geom_line()
+
+```
+> The number of each line generally follows a long-short pattern with few fluctuations in one pattern.
+
+##### syllables of words with in a line vs number of syllables in each line 
+```{r}
+ggplot(raven_syllable, aes(x=n_line_word, y=n_line_syllable, color=factor(overall_line)))+geom_line()
+```
+> In each line of the poem, the number of syllables increases within a line. Generally speaking, if we look at the trend of the whole poem, it starts with a less syllable line, then lines with more reaches the maximum at 90th-100th line, and eventually back to lines with less number of syllables.
+
+##### Use of the word 'chamber' in Edgar Allan Poe's the raven
+```{r}
+ggplot(raven_wd, aes(x = n_line_word, y = overall_line, 
+                       fill = str_detect(word, "chamber"))) + 
+  geom_tile(color = "black") + 
+  scale_fill_manual("Word is chamber", values = c("FALSE" = "white", "TRUE" = "blue")) + 
+  # Make the tiles start at the top for line 1, like we would read in a poem
+  scale_y_reverse() +
+  ggtitle("Use of the word 'chamber' in Edgar Allan Poe's the raven")
+```
+
+
+Hints: `stringr` is the package for text manipulation. `str_split` will split lines into words. You may also find `unnest` from the `tidyr` package to be useful 
+
+You can get a preview of next week's material that covers `stringr` in more detail [here](https://srvanderplas.github.io/unl-stat850/transforming-data.html#string-operations-creating-new-variables-and-separating-multi-variable-columns)
+
+## Superstitions?
+
+Five Thirty Eight published a story called ["Some people are too superstitious to have a baby on Friday the 13th"](http://fivethirtyeight.com/features/some-people-are-too-superstitious-to-have-a-baby-on-friday-the-13th/), and, along with the story, they published the data to [this github repo](https://github.com/fivethirtyeight/data/tree/master/births). Download one of the CSVs in the repository and read it into SAS. 
+
+1. Aggregate the data by month - is there any difference in the average number of births each month, across different months?  
+*Yes, there is difference in the average number of births each month, the peak average births happens in September and the lowest point happens in January. Looking at the plot of **birth average over month vs month**, the average births starts low at January, gradually increase, followed by a little dip at April, then keep increasing and reaches peak at September. After September, the line drops down in the following two months and back up slightly at December.*   
+  
+2. Aggregate the data by day of the week. Are there any days of the week that are less likely to have births?  
+*Yes, if we look at the **birth average over day of the week vs day of the week**, we can see the average of day of the week drops drastically on weekends.*
+
+3. Compute the day of the year (so Feb 1 would be 32, June 25 would be 176 if the year isn't a leap year, and 177 otherwise, and so on). What can you say about overall trends based on the day of the year? Are there any that would not be attributable to regular holidays, such as Memorial day, Labor Day, and Christmas? (Thanksgiving and Easter rotate around a bit more). Bonus points if you can figure out a macro that will compute this based on the year, month, and date.  
+*If we look at the plot **birth average over day of the year vs day of the year**, we can tell the overall line is going up gradually from the first day of the year to the 270th day of the year, then it decreases in the following 50 and go back up again after the 320th day of the year.*  
+*If we take a closer look, the line is consists of fluctuations. There are several noteworthy peaks and vallies appears at the first day, around the 50th of the year, the 190th day of the year, the 300th day of the year, the 320th day of the year, around the final 20 days of the year.*  
+  
+  
+
+4. Think through some way to numerically compare the births on Fridays (not the 13th) with births on Fridays that are the 13th. You can fit a model, compute means and subtract them -- whatever you think is appropriate. I will evaluate you on your code and logic, not on your statistical skills.   
+*My conclusion is the births on Fridays (not the 13th) are substantially different with births on Fridays that are the 13th.*  
+*To compare the births on Fridays (not the 13th) with births on Fridays that are the 13th, I create a new table concacted by table of births on Friday (not the 13th) and table of births on Fridays that are the 13th. Then I lable different cases with catorical class 1 and 2, ultilizing a glimmix process to test if they are different. By looking at the type 3 tests table, the class has a statistically significant effect on the number of births for the p-value of the F test is 0.0008, which is much less than 0.05 (the convention typeI error rate).*
