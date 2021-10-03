@@ -22,6 +22,7 @@ run;
 symbol1 interpol=join value=dot;
 proc gplot data=average_month_birth;
 	plot avg_month_birth*month;
+	title "birth average over month vs month";
 	run;
 
 
@@ -36,6 +37,7 @@ run;
 symbol1 interpol=join value=dot;
 proc gplot data=average_day_birth;
 	plot avg_day_of_week_birth*day_of_week;
+	title "birth average over day of the week vs day of the week"
 	run;
 
 /*3, Compute the day of the year*/
@@ -82,12 +84,13 @@ run;
 proc sql;
 	create table avg_day_year as
 	select day_of_year, avg(births) as avg_day_of_year_birth from day_year group by day_of_year;
-proc print data=avg_day_year;
+proc print data=avg_day_year(obs=10);
 run;
 /*plot birth average over day of the year vs day of the year*/
 symbol1 interpol=join value=dot;
 proc gplot data=avg_day_year;
 	plot avg_day_of_year_birth*day_of_year;
+	title "birth average over day of the year vs day of the year";
 	run;
 
 /*Regular holiday effect*/
@@ -115,7 +118,7 @@ proc sql;
 		union all 
 		select * from fri_not_13
 	run;
-proc print data=compare;
+proc print data=compare(obs=10);
 title "Birth on Friday that are th 13th and not the 13th";
 run;
 
@@ -125,10 +128,10 @@ data compare_cate;
 	if date_of_month=13 then class=1;
 	if date_of_month^=13 then class=2;
 	run;
-proc print data=compare_cate;
+proc print data=compare_cate(obs=10);
 run;
 
-/*Perform a T test*/
+/*Perform a test using glimmix process*/
 proc glimmix data=compare_cate;
 	class class;
 	model births=class;
