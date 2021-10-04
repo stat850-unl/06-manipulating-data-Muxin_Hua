@@ -89,21 +89,21 @@ raven_syllable <- raven_wd %>%
 ```
 
 #### Plot data
-> 1. line vs number of words per line  
-> 2. line with in one stanza vs number of words per line   
+*1. line vs number of words per line*   
+*2. line with in one stanza vs number of words per line*  
 
 ```{r}
 ggplot(raven_tb, aes(x = 1:nrow(raven_tb), y = n_word))+geom_line()
 ggplot(raven_tb, aes(x=stanza_line, y=n_word, color = factor(stanza))) + geom_line()
 
 ```
-> The number of each line generally follows a long-short pattern with few fluctuations in one pattern.
+*The number of each line generally follows a long-short pattern with few fluctuations in one pattern.*
 
 ##### syllables of words with in a line vs number of syllables in each line 
 ```{r}
 ggplot(raven_syllable, aes(x=n_line_word, y=n_line_syllable, color=factor(overall_line)))+geom_line()
 ```
-> In each line of the poem, the number of syllables increases within a line. Generally speaking, if we look at the trend of the whole poem, it starts with a less syllable line, then lines with more reaches the maximum at 90th-100th line, and eventually back to lines with less number of syllables.
+*In each line of the poem, the number of syllables increases within a line. Generally speaking, if we look at the trend of the whole poem, it starts with a less syllable line, then lines with more reaches the maximum at 90th-100th line, and eventually back to lines with less number of syllables.*
 
 ##### Use of the word 'chamber' in Edgar Allan Poe's the raven
 ```{r}
@@ -133,10 +133,10 @@ Five Thirty Eight published a story called ["Some people are too superstitious t
 
 3. Compute the day of the year (so Feb 1 would be 32, June 25 would be 176 if the year isn't a leap year, and 177 otherwise, and so on). What can you say about overall trends based on the day of the year? Are there any that would not be attributable to regular holidays, such as Memorial day, Labor Day, and Christmas? (Thanksgiving and Easter rotate around a bit more). Bonus points if you can figure out a macro that will compute this based on the year, month, and date.  
 *If we look at the plot **birth average over day of the year vs day of the year**, we can tell the overall line is going up gradually from the first day of the year to the 270th day of the year, then it decreases in the following 50 and go back up again after the 320th day of the year.*  
-*If we take a closer look, the line is consists of fluctuations. There are several noteworthy peaks and vallies appears at the first day, around the 50th of the year, the 190th day of the year, the 300th day of the year, the 320th day of the year, around the final 20 days of the year.*  
-  
+*If we take a closer look, the line is consists of fluctuations. There are several noteworthy peaks and valleys appears at the first day, around the 50th of the year, the 190th day of the year, the 300th day of the year, the 320th day of the year, around the final 20 days of the year.*   
+*To determine if the holidays attribute, I run macros to compute the average births of Christmas, Memorial day and Labor day. They have births average values of 6437.867,  7813.867 and 8125.133. But if we look at the overall average births, that would be 11350.07, which is larger than any of the holiday average, so I would conclude holidays contributes to the strong fluctuations in the overall trend.*  
   
 
 4. Think through some way to numerically compare the births on Fridays (not the 13th) with births on Fridays that are the 13th. You can fit a model, compute means and subtract them -- whatever you think is appropriate. I will evaluate you on your code and logic, not on your statistical skills.   
 *My conclusion is the births on Fridays (not the 13th) are substantially different with births on Fridays that are the 13th.*  
-*To compare the births on Fridays (not the 13th) with births on Fridays that are the 13th, I create a new table concacted by table of births on Friday (not the 13th) and table of births on Fridays that are the 13th. Then I lable different cases with catorical class 1 and 2, ultilizing a glimmix process to test if they are different. By looking at the type 3 tests table, the class has a statistically significant effect on the number of births for the p-value of the F test is 0.0008, which is much less than 0.05 (the convention typeI error rate).*
+*To compare the births on Fridays (not the 13th) with births on Fridays that are the 13th, I create a new table concatenated by table of births on Friday (not the 13th) and table of births on Fridays that are the 13th. Then I label different cases with categorical class 1 and 2, utilizing a `glimmix` process to test if they are different. By looking at the type 3 tests table, the class has a statistically significant effect on the number of births for the p-value of the F test is 0.0008, which is much less than 0.05 (the convention type I error rate).*

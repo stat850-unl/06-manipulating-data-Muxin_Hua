@@ -94,16 +94,67 @@ proc gplot data=avg_day_year;
 	run;
 
 /*Regular holiday effect*/
-%let month=1;
-%let date=1; 
-%let week=1;
-%let holi=New_year;
+/*To identify the holiday effect, I compare the average births on the holidays with the average of births over the year, save it as yearly_avg*/
 proc sql;
-	create table new_year as
-	select avg(births) as &holi from num_super where month=&month & date_of_month=&date;
+	select avg(births) 
+		into : yearly_avg
+		from num_super;
 	run;
-proc print data=new_year;
+proc print data=yearly_avg;
+run;
+
+/*There mentioned holiday date are three different types: 
+	a, exact date, like Christmas on exact December 25,
+	b, weekday of the last week of a month, like Memorial day which is on the last Monday in May,
+	c, weekday of a week of a month, like Labor day which is on first Monday in September */
+
+/*a) Exact day holiday*/
+%let month=12; /*The month of the hoiday*/
+%let date=25; /*The day of month of the holiday*/
+%let holi=christmas;  /*the name of the holiday*/
+proc sql;
+	select avg(births)
+	into : avg&holi
+	from num_super where month=&month & date_of_month=&date;
 	run;
+proc print avg&holi;
+title "Average of &holi";
+run;
+
+/*b) weekday of the last week of a month*/
+%let month=5; /*The month of the hoiday*/
+%let weekday=1; /*the day of the week of the holiday*/
+%let week=-1;
+%let holi=Memorial_day;  /*the name of the holiday*/
+proc sql;
+	create table &holi as
+		select *
+		from num_super where month=&month & day_of_week=&weekday 
+		group by year
+		having date_of_month = max(date_of_month);
+	run;
+	select avg(births) 
+		into : avg&holi
+		from &holi;
+	run;
+proc print avg&holi;
+title "Average of &holi";
+run;
+
+/*c) weekday of a week of a month*/
+%let month=9; /*The month of the hoiday*/
+%let weekday=1; /*the day of the week of the holiday*/
+%let week=1;
+%let holi=Labor_day;  /*the name of the holiday*/
+proc sql;
+	select avg(births)
+	into : avg&holi
+	from num_super where month=&month & day_of_week=&weekday & (&week-1)*7<date_of_month<=&week*7; 
+	run;
+proc print avg&holi;
+title "Average of &holi";
+run;
+
 
 /*4, numerically compare the births on Fridays (not the 13th) with births on Fridays that are the 13th*/
 /*Create a new table concacted by table of births on Friday (not the 13th) and table of births on Fridays that are the 13th*/
